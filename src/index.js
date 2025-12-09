@@ -6,7 +6,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import connectRedis from 'connect-redis';
+import pkgConnectRedis from 'connect-redis';
 import { createClient } from 'redis';
 
 
@@ -44,9 +44,9 @@ app.use(helmet({
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Redis client (FIXED)
+const RedisStore = pkgConnectRedis(session);
 
-// Redis client
-const RedisStore = connectRedis(session);
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://127.0.0.1:6379'
 });
