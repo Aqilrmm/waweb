@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Multi-Device Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .stat-card h3 {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .devices-section {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .section-header h2 {
+      color: #333;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .devices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .device-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      background: #f9fafb;
+    }
+
+    .device-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .device-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .device-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-connected {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-disconnected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-qr_ready {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .device-info {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .device-info p {
+      margin: 5px 0;
+    }
+
+    .device-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .device-actions .btn {
+      padding: 8px 15px;
+      font-size: 13px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .form-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 5px;
+    }
+
+    .qr-code {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .qr-code img {
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .login-container {
+      max-width: 400px;
+      margin: 100px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .login-container h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .logs-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      padding: 10px;
+      margin: 5px 0;
+      border-left: 3px solid #ccc;
+      background: #f9fafb;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .log-entry.info {
+      border-left-color: #3b82f6;
+    }
+
+    .log-entry.warn {
+      border-left-color: #f59e0b;
+    }
+
+    .log-entry.error {
+      border-left-color: #ef4444;
+    }
+
+    .log-time {
+      color: #666;
+      font-size: 11px;
+    }
+
+    .log-device {
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    .log-message {
+      color: #333;
+      margin-top: 3px;
+    }
+
+    #app {
+      display: none;
+    }
+
+    #app.active {
+      display: block;
+    }
+
+    #loginPage.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="loginPage">
+    <div class="login-container">
+      <h1>🔐 Admin Login</h1>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app">
+    <div class="container">
+      <div class="header">
+        <h1>📱 WhatsApp Multi-Device Manager</h1>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Devices</h3>
+          <div class="value" id="totalDevices">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Connected</h3>
+          <div class="value" id="connectedDevices">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Messages Sent</h3>
+          <div class="value" id="messagesSent">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Messages Received</h3>
+          <div class="value" id="messagesReceived">0</div>
+        </div>
+      </div>
+
+      <div class="devices-section">
+        <div class="section-header">
+          <h2>Devices</h2>
+          <button class="btn btn-primary" onclick="showAddDeviceModal()">+ Add Device</button>
+        </div>
+        <div id="devicesContainer" class="devices-grid"></div>
+      </div>
+
+      <div class="logs-section">
+        <div class="section-header">
+          <h2>Recent Logs</h2>
+          <button class="btn btn-secondary" onclick="loadLogs()">🔄 Refresh</button>
+        </div>
+        <div id="logsContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="addDeviceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Device</h2>
+      </div>
+      <form id="addDeviceForm">
+        <div class="form-group">
+          <label>Device Name</label>
+          <input type="text" name="name" required placeholder="e.g., Customer Service 1">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary">Add Device</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addDeviceModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="qrModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Scan QR Code</h2>
+      </div>
+      <div id="qrContainer" class="qr-code">
+        <p>Loading QR Code...</p>
+      </div>
+      <button class="btn btn-secondary" onclick="closeModal('qrModal')" style="width: 100%;">Close</button>
+    </div>
+  </div>
+
+  <div id="configModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>Device Configuration</h2>
+      </div>
+      <form id="configForm">
+        <input type="hidden" name="deviceId">
+        
+        <div class="form-group">
+          <label>Device Name</label>
+          <input type="text" name="name" required>
+        </div>
+
+        <div class="form-group">
+          <label>Webhook URL</label>
+          <input type="url" name="webhook_url" placeholder="https://api.example.com/webhook">
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="webhook_enabled">
+            Enable Webhook
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="webhook_response_enabled">
+            Enable Webhook Response (Auto-reply)
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Webhook Body Template (JSON)</label>
+          <div style="margin-bottom: 10px; padding: 10px; background: #f0f9ff; border-radius: 5px; font-size: 12px;">
+            <strong>Available Variables:</strong><br>
+            <code>{{device_id}}</code> - Device ID<br>
+            <code>{{device_name}}</code> - Device Name<br>
+            <code>{{device_phone}}</code> - Device Phone Number<br>
+            <code>{{message_id}}</code> - Message ID<br>
+            <code>{{from}}</code> - Sender Number (628xxx@c.us)<br>
+            <code>{{to}}</code> - Recipient Number<br>
+            <code>{{from_name}}</code> - Sender Name<br>
+            <code>{{message}}</code> - Message Body<br>
+            <code>{{message_type}}</code> - Message Type (chat, image, etc)<br>
+            <code>{{timestamp}}</code> - Unix Timestamp<br>
+            <code>{{is_group}}</code> - Is Group Message (true/false)<br>
+            <code>{{chat_name}}</code> - Chat Name<br>
+            <code>{{has_media}}</code> - Has Media Attachment<br>
+            <code>{{is_forwarded}}</code> - Is Forwarded Message<br>
+          </div>
+            <textarea name="webhook_body_template" rows="12" style="font-family: monospace; font-size: 12px;"
+                placeholder="Masukkan JSON template di sini">
+            </textarea>
+
+          <small style="color: #666;">Leave empty to use default payload</small>
+        </div>
+
+        <div class="form-group">
+          <label>Webhook Response Path</label>
+          <input type="text" name="webhook_response_path" placeholder="e.g., data.reply or result.message">
+          <small style="color: #666;">Path to extract reply message from webhook response (e.g., "data.reply", "message", "result.text"). Leave empty to auto-detect.</small>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-success">Save Configuration</button>
+          <button type="button" class="btn btn-secondary" onclick="testWebhook()">Test Webhook</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="deviceLogsModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h2>Device Logs</h2>
+      </div>
+      <div id="deviceLogsContainer" style="max-height: 500px; overflow-y: auto;"></div>
+      <button class="btn btn-secondary" onclick="closeModal('deviceLogsModal')" style="width: 100%; margin-top: 10px;">Close</button>
+    </div>
+  </div>
+
+  <script>
+    let currentDeviceId = null;
+    let qrInterval = null;
+
+    // Check authentication on load
+    checkAuth();
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        if (data.authenticated) {
+          document.getElementById('loginPage').classList.add('hidden');
+          document.getElementById('app').classList.add('active');
+          loadDashboard();
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    }
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('loginPage').classList.add('hidden');
+          document.getElementById('app').classList.add('active');
+          loadDashboard();
+        } else {
+          alert(data.message || 'Login failed');
+        }
+      } catch (error) {
+        alert('Login error: ' + error.message);
+      }
+    });
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      location.reload();
+    }
+
+    async function loadDashboard() {
+      await loadStats();
+      await loadDevices();
+      await loadLogs();
+      setInterval(loadStats, 5000);
+      setInterval(loadDevices, 10000);
+      setInterval(loadLogs, 10000);
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('connectedDevices').textContent = data.data.connected_devices || 0;
+          document.getElementById('messagesSent').textContent = data.data.total_sent || 0;
+          document.getElementById('messagesReceived').textContent = data.data.total_received || 0;
+        }
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    }
+
+    async function loadDevices() {
+      try {
+        const res = await fetch('/api/devices');
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('totalDevices').textContent = data.data.length;
+          renderDevices(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to load devices:', error);
+      }
+    }
+
+    function renderDevices(devices) {
+      const container = document.getElementById('devicesContainer');
+      if (devices.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No devices yet. Click "Add Device" to get started.</p></div>';
+        return;
+      }
+
+      container.innerHTML = devices.map(device => `
+        <div class="device-card">
+          <div class="device-header">
+            <div class="device-name">${device.name}</div>
+            <div class="device-status status-${device.status}">${device.status}</div>
+          </div>
+          <div class="device-info">
+            <p><strong>ID:</strong> ${device.id}</p>
+            ${device.phone_number ? `<p><strong>Phone:</strong> ${device.phone_number}</p>` : ''}
+            <p><strong>Webhook:</strong> ${device.webhook_enabled ? '✅ Enabled' : '❌ Disabled'}</p>
+          </div>
+          <div class="device-actions">
+            ${device.status === 'qr_ready' ? `<button class="btn btn-primary" onclick="showQR('${device.id}')">Show QR</button>` : ''}
+            <button class="btn btn-secondary" onclick="showConfig('${device.id}')">Config</button>
+            <button class="btn btn-secondary" onclick="showDeviceLogs('${device.id}')">Logs</button>
+            <button class="btn btn-secondary" onclick="restartDevice('${device.id}')">Restart</button>
+            <button class="btn btn-danger" onclick="deleteDevice('${device.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showAddDeviceModal() {
+      document.getElementById('addDeviceModal').classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+      if (qrInterval) {
+        clearInterval(qrInterval);
+        qrInterval = null;
+      }
+    }
+
+    document.getElementById('addDeviceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const name = formData.get('name');
+
+      try {
+        const res = await fetch('/api/devices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          closeModal('addDeviceModal');
+          e.target.reset();
+          loadDevices();
+          alert('Device added successfully!');
+        } else {
+          alert(data.message || 'Failed to add device');
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+
+    async function showQR(deviceId) {
+      currentDeviceId = deviceId;
+      document.getElementById('qrModal').classList.add('active');
+      loadQR();
+      qrInterval = setInterval(loadQR, 3000);
+    }
+
+    async function loadQR() {
+      try {
+        const res = await fetch(`/api/devices/${currentDeviceId}/qr`);
+        const data = await res.json();
+        if (data.success && data.data.qr_code) {
+          document.getElementById('qrContainer').innerHTML = `<img src="${data.data.qr_code}" alt="QR Code">`;
+        } else if (data.data.status === 'connected') {
+          document.getElementById('qrContainer').innerHTML = '<p style="color: green;">✅ Device Connected!</p>';
+          clearInterval(qrInterval);
+          setTimeout(() => {
+            closeModal('qrModal');
+            loadDevices();
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Failed to load QR:', error);
+      }
+    }
+
+    async function showConfig(deviceId) {
+      try {
+        const res = await fetch(`/api/devices/${deviceId}`);
+        const data = await res.json();
+        if (data.success) {
+          const form = document.getElementById('configForm');
+          form.deviceId.value = deviceId;
+          form.name.value = data.data.name;
+          form.webhook_url.value = data.data.webhook_url || '';
+          form.webhook_enabled.checked = data.data.webhook_enabled === 1;
+          form.webhook_response_enabled.checked = data.data.webhook_response_enabled === 1;
+          form.webhook_body_template.value = data.data.webhook_body_template || '';
+          form.webhook_response_path.value = data.data.webhook_response_path || '';
+          document.getElementById('configModal').classList.add('active');
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    document.getElementById('configForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const deviceId = formData.get('deviceId');
+      
+      // Validate JSON template if provided
+      const bodyTemplate = formData.get('webhook_body_template');
+      if (bodyTemplate && bodyTemplate.trim()) {
+        try {
+          // Replace variables with appropriate test values based on context
+          let testTemplate = bodyTemplate;
+          
+          // Replace variables that typically contain strings with quoted strings
+          testTemplate = testTemplate.replace(/"\{\{(device_id|device_name|device_phone|message_id|from|to|from_name|message|message_type|chat_name)\}\}"/g, '"test_value"');
+          
+          // Replace variables that are typically booleans
+          testTemplate = testTemplate.replace(/\{\{(is_group|has_media|is_forwarded|is_status|broadcast)\}\}/g, 'false');
+          
+          // Replace variables that are typically numbers
+          testTemplate = testTemplate.replace(/\{\{timestamp\}\}/g, '1234567890');
+          
+          // Replace any remaining variables with strings
+          testTemplate = testTemplate.replace(/\{\{[^}]+\}\}/g, '"value"');
+          
+          // Try to parse
+          JSON.parse(testTemplate);
+        } catch (error) {
+          alert('Invalid JSON template! Please check your syntax.\n\nError: ' + error.message);
+          return;
+        }
+      }
+      
+      const payload = {
+        name: formData.get('name'),
+        webhook_url: formData.get('webhook_url'),
+        webhook_enabled: formData.get('webhook_enabled') === 'on',
+        webhook_response_enabled: formData.get('webhook_response_enabled') === 'on',
+        webhook_body_template: bodyTemplate || null,
+        webhook_response_path: formData.get('webhook_response_path') || null
+      };
+
+      try {
+        const res = await fetch(`/api/devices/${deviceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          closeModal('configModal');
+          loadDevices();
+          alert('Configuration saved!');
+        } else {
+          alert(data.message || 'Failed to save');
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+
+    async function showDeviceLogs(deviceId) {
+      try {
+        const res = await fetch(`/api/devices/${deviceId}/logs?limit=100`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const container = document.getElementById('deviceLogsContainer');
+          
+          if (data.data.length === 0) {
+            container.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">No logs for this device yet</p>';
+          } else {
+            container.innerHTML = data.data.map(log => {
+              const date = new Date(log.timestamp * 1000);
+              const timeStr = date.toLocaleString();
+              return `
+                <div class="log-entry ${log.level}">
+                  <div class="log-time">${timeStr}</div>
+                  <div class="log-message">[${log.level.toUpperCase()}] ${log.message}</div>
+                </div>
+              `;
+            }).join('');
+          }
+          
+          document.getElementById('deviceLogsModal').classList.add('active');
+        }
+      } catch (error) {
+        alert('Error loading logs: ' + error.message);
+      }
+    }
+
+    async function testWebhook() {
+      const formData = new FormData(document.getElementById('configForm'));
+      const deviceId = formData.get('deviceId');
+      const webhookUrl = formData.get('webhook_url');
+      const bodyTemplate = formData.get('webhook_body_template');
+      
+      if (!webhookUrl) {
+        alert('Please enter webhook URL first');
+        return;
+      }
+
+      if (!deviceId) {
+        alert('Device ID not found');
+        return;
+      }
+
+      const testData = {
+        webhook_url: webhookUrl,
+        body_template: bodyTemplate || null
+      };
+
+      try {
+        // Call through backend to avoid CORS
+        const res = await fetch(`/api/devices/${deviceId}/test-webhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+
+        const result = await res.json();
+        
+        if (result.success) {
+          alert(`✅ Webhook Test Success!\n\nStatus: ${result.data.status}\n\nRequest:\n${JSON.stringify(result.data.request, null, 2)}\n\nResponse:\n${JSON.stringify(result.data.response, null, 2)}`);
+        } else {
+          alert(`❌ Webhook Test Failed!\n\n${result.message}\n\nDetails: ${result.error || 'No details available'}`);
+        }
+      } catch (error) {
+        alert('❌ Webhook test failed: ' + error.message);
+      }
+    }
+
+    async function loadLogs() {
+      try {
+        const res = await fetch('/api/stats/logs?limit=50');
+        const data = await res.json();
+        if (data.success) {
+          renderLogs(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to load logs:', error);
+      }
+    }
+
+    function renderLogs(logs) {
+      const container = document.getElementById('logsContainer');
+      if (logs.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No logs yet</p>';
+        return;
+      }
+
+      container.innerHTML = logs.map(log => {
+        const date = new Date(log.timestamp * 1000);
+        const timeStr = date.toLocaleString();
+        return `
+          <div class="log-entry ${log.level}">
+            <div class="log-time">${timeStr}</div>
+            ${log.device_id ? `<div class="log-device">Device: ${log.device_id}</div>` : ''}
+            <div class="log-message">[${log.level.toUpperCase()}] ${log.message}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function restartDevice(deviceId) {
+      if (!confirm('Restart this device?')) return;
+      
+      try {
+        const res = await fetch(`/api/devices/${deviceId}/restart`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert('Device restart initiated');
+          loadDevices();
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function deleteDevice(deviceId) {
+      if (!confirm('Delete this device? This action cannot be undone.')) return;
+      
+      try {
+        const res = await fetch(`/api/devices/${deviceId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          alert('Device deleted');
+          loadDevices();
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Close modals on outside click
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal(modal.id);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
