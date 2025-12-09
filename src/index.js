@@ -6,9 +6,6 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import pkgConnectRedis from 'connect-redis';
-import { createClient } from 'redis';
-
 
 import { initDatabase } from './models/database.js';
 import { logger } from './utils/logger.js';
@@ -44,27 +41,20 @@ app.use(helmet({
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Redis client (FIXED)
-const RedisStore = pkgConnectRedis(session);
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://127.0.0.1:6379'
-});
-redisClient.connect().catch(console.error);
-
-// Session middleware (FIXED)
+// Session middleware - using file system store (no Redis needed)
 app.use(session({
-  store: new RedisStore({ client: redisClient }),
   secret: process.env.SESSION_SECRET || 'change-this-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // true kalau sudah HTTPS
+    secure: false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: 'lax'
   }
 }));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', deviceRoutes);
