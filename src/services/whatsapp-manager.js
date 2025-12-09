@@ -23,6 +23,8 @@ export class WhatsAppManager {
       }),
       puppeteer: {
         headless: true,
+        // Use system Chrome - try these paths in order
+        executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable' || '/usr/bin/chromium-browser' || '/usr/bin/chromium',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -30,7 +32,9 @@ export class WhatsAppManager {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--single-process', // Add this for stability
+          '--disable-extensions'
         ]
       }
     });
@@ -139,7 +143,6 @@ export class WhatsAppManager {
       if (device.webhook_body_template) {
         try {
           logger.info(`[${deviceId}] Using custom body template`);
-          // Parse template and replace variables
           webhookPayload = this.buildDynamicPayload(device.webhook_body_template, {
             device_id: deviceId,
             device_name: device.name,
@@ -162,13 +165,11 @@ export class WhatsAppManager {
         } catch (error) {
           logger.error(`[${deviceId}] Error building dynamic payload: ${error.message}`);
           logModel.create(deviceId, 'error', `Payload build failed: ${error.message}`);
-          // Fallback to default payload
           webhookPayload = this.getDefaultPayload(deviceId, device, msg);
           logModel.create(deviceId, 'warn', 'Using default payload as fallback');
         }
       } else {
         logger.info(`[${deviceId}] Using default payload`);
-        // Use default payload if no template
         webhookPayload = this.getDefaultPayload(deviceId, device, msg);
       }
 
@@ -177,15 +178,24 @@ export class WhatsAppManager {
 
       const response = await axios.post(device.webhook_url, webhookPayload, {
         timeout: 10000,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        validateStatus: function (status) {
+          return status < 600; // Accept any status code less than 600
+        }
       });
 
       statsModel.increment(deviceId, 'webhook_calls');
-      logger.info(`[${deviceId}] Webhook successful: ${response.status}`);
-      logModel.create(deviceId, 'info', `Webhook success: ${response.status}`);
+      
+      if (response.status >= 200 && response.status < 300) {
+        logger.info(`[${deviceId}] Webhook successful: ${response.status}`);
+        logModel.create(deviceId, 'info', `Webhook success: ${response.status}`);
+      } else {
+        logger.warn(`[${deviceId}] Webhook returned non-success status: ${response.status}`);
+        logModel.create(deviceId, 'warn', `Webhook status ${response.status}: ${JSON.stringify(response.data)}`);
+      }
 
-      // Send response back if enabled
-      if (device.webhook_response_enabled && response.data) {
+      // Send response back if enabled - only for successful responses
+      if (device.webhook_response_enabled && response.data && response.status >= 200 && response.status < 300) {
         logger.info(`[${deviceId}] Processing webhook response for auto-reply`);
         const replyMessage = this.extractResponseMessage(response.data, device.webhook_response_path);
         
@@ -209,15 +219,12 @@ export class WhatsAppManager {
   }
 
   buildDynamicPayload(template, variables) {
-    // Parse JSON template and replace {{variables}}
     let jsonString = template;
     
-    // Replace all {{variable}} with actual values
     Object.keys(variables).forEach(key => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       const value = variables[key];
       
-      // Handle different types
       if (typeof value === 'string') {
         jsonString = jsonString.replace(regex, value);
       } else if (typeof value === 'number' || typeof value === 'boolean') {
@@ -245,11 +252,9 @@ export class WhatsAppManager {
 
   extractResponseMessage(responseData, responsePath) {
     if (!responsePath) {
-      // Try common paths
       return responseData.reply || responseData.message || responseData.response || null;
     }
 
-    // Navigate through object path (e.g., "data.reply" or "result.message")
     const paths = responsePath.split('.');
     let current = responseData;
 
